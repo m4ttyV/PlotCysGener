@@ -168,9 +168,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Программа для анализа данных скорости ветра в файлах NetCDF.")
     parser.add_argument(
         "--startdate", "-sd",
-        required=False,
-        default="2015-05-01",
-        # required=True,
+        # required=False,
+        # default="2015-05-01",
+        required=True,
         help="Дата начала периода в формате yyyy-mm-dd",
     )
     parser.add_argument(
@@ -220,7 +220,4 @@ if __name__ == "__main__":
     if args.tropicalcyclone == 0:
         cis_type_tc = False
 
-
-#sqlalchemy timestamp (pythondate -> timestamp)
-    # Запускаем обработку данных
     main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave)
