@@ -11,6 +11,51 @@ from datetime import datetime, timedelta
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 
+def track_tc(bm, tracks): #1
+    for track in tracks:
+        line = loads(track)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'yellow'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+
+def track_zn(bm, tracks): #3
+    for track in tracks:
+        line = loads(track)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'blue'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+
+def track_az(bm, tracks): #4
+    for track in tracks:
+        line = loads(track)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'red'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+
+
+def dot_tc(bm, dots):
+    for dot in dots:
+        vm_lons, vm_lats = dot.split(' ')
+        color = 'yellow'
+        x, y = bm(vm_lons, vm_lats)
+        bm.plot(x, y, marker='o', color=color, markersize=5)
+
+def dot_zn(bm, dots):
+    for dot in dots:
+        vm_lons, vm_lats = dot.split(' ')
+        color = 'blue'
+        x, y = bm(vm_lons, vm_lats)
+        bm.plot(x, y, marker='o', color=color, markersize=5)
+
+def dot_az(bm, dots):
+    for dot in dots:
+        vm_lons, vm_lats = dot.split(' ')
+        color = 'red'
+        x, y = bm(vm_lons, vm_lats)
+        bm.plot(x, y, marker='o', color=color, markersize=5)
 
 def get_cis_property_view_month(date_start, date_end, cur):
     command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
@@ -30,13 +75,9 @@ def get_cis_track_view_month(date_start, date_end, cur):
 # 4 - антициклон
 
 def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): #Циклон, Антициклон, Тропический циклон
-
+    # Считываем карту и рисуем необходимую область
     os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
-    map = gpd.read_file('map/ne_110m_coastline.shp')
-    # bm = Basemap(
-    #             llcrnrlat=20, urcrnrlat=70, \
-    #             llcrnrlon=105, urcrnrlon=200, \
-    #             resolution='c', projection='tmerc', lon_0=170, lat_0=50)
+    gpd.read_file('map/ne_110m_coastline.shp')
     bm = Basemap(width=8000000,height=6500000,
                 rsphere=(6378137.00,6356752.3142),\
                 resolution='l',area_thresh=1000.,projection='lcc',\
@@ -45,8 +86,11 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     bm.drawparallels(np.arange(-80.,81.,5.))
     bm.drawmeridians(np.arange(-180.,181.,5.))
     bm.readshapefile('map/ne_110m_coastline', 'coastline')
+
+    # Считываем параметры БД
     with open('confing.conf', 'r') as f:
         db_conf = f.read().splitlines()
+
     DB_HOST = ""
     DB_PORT = ""
     DB_NAME = ""
@@ -80,10 +124,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
 
     # Создаем курсор для выполнения запросов
     cur = conn.cursor()
-    view_mon_rows = list()
-    track_view_rows = list()
-    # dt = "2015-05-01"
-    # start_date = datetime.strptime(dt, "%Y-%m-%d")
+
     end_date = None
     start_date =  datetime.strptime(start_date, "%Y-%m-%d")
     if period == 0:
@@ -91,61 +132,63 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     else:
         end_date = start_date + timedelta(days=10)
 
-    # Вызываем функции
+    # формируем и заранее создаем необходимые списки
     view_mon_rows = get_cis_property_view_month(start_date, end_date, cur)
     track_view_rows = get_cis_track_view_month(start_date, end_date, cur)
+    track_view_tc = list()
+    track_view_zn = list()
+    track_view_az = list()
 
+    mon_view_tc = list()
+    mon_view_zn = list()
+    mon_view_az = list()
+
+    # формируем списки линий по типам циклонов
     for track in track_view_rows:
-        if track[0] is None:
-            continue
-        line = loads(track[0])
-        lons, lats = zip(*list(line.coords))  # Разбираем координаты
         type = track[1]
-
-        if not cys_type_zn:
-            if type == 3:
-                continue
-        if not cys_type_az:
-            if type == 4:
-                continue
-        if not cys_type_tc:
-            if type == 1:
-                continue
-
-        x, y = bm(lons, lats)
-        color = 'red'  # Цвет по умолчанию
-        if type == 3:
-            color = 'blue'
+        row = track[0]
         if type == 1:
-            color = 'yellow'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
+            if cys_type_tc:
+                if row is None:
+                    continue
+                track_view_tc.append(row)
+        if type == 3:
+             if cys_type_zn:
+                if row is None:
+                    continue
+                track_view_zn.append(row)
+        if type == 4:
+            if cys_type_az:
+                if row is None:
+                    continue
+                track_view_az.append(row)
 
+    # формируем списки точек по типам циклонов
     for dot in view_mon_rows:
-        # Предположим, что dot - это кортеж или список с нужными данными, например, (lon, lat, type)
-        vm_lons = dot[0]  # Долгота
-        vm_lats = dot[1]  # Широта
-        type = dot[2]  # Тип (например, "Циклон" или другое)
-
-        if not cys_type_zn:
-            if type == 3:
-                continue
-        if not cys_type_az:
-            if type == 4:
-                continue
-        if not cys_type_tc:
+        vm_lons = dot[0]
+        vm_lats = dot[1]
+        type = dot[2]
+        if cys_type_tc:
             if type == 1:
-                continue
+                mon_view_tc.append(f"{vm_lons} {vm_lats}")
+        if cys_type_zn:
+            if type == 3:
+                mon_view_zn.append(f"{vm_lons} {vm_lats}")
+        if cys_type_az:
+            if type == 4:
+                mon_view_az.append(f"{vm_lons} {vm_lats}")
 
-        color = 'red'  # Цвет по умолчанию
-        if type == 3:
-            color = 'blue'
-        if type == 1:
-            color = 'yellow'
-        # Преобразуем долготу и широту в координаты карты
-        x, y = bm(vm_lons, vm_lats)
-        # Отображаем точку на карте
-        bm.plot(x, y, marker='o', color=color, markersize=5)
+    # построение точек
+    dot_tc(bm, mon_view_tc)
+    dot_zn(bm, mon_view_zn)
+    dot_az(bm, mon_view_az)
 
+    # построение линий
+    track_tc(bm, track_view_tc)
+    track_zn(bm, track_view_zn)
+    track_az(bm, track_view_az)
+
+    # формирование имени файла и пути
     filepath = save_path + str(datetime.strftime(start_date,"%Y%m%d"))
     if period == "0":
         filepath = filepath + "_month_"
@@ -157,8 +200,9 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
         filepath = filepath + "Az"
     if cys_type_tc:
         filepath = filepath + "Tc"
-
     filepath = filepath + ".jpg"
+
+    # сохраняем файл
     plt.savefig(filepath)
     # Закрываем соединение
     cur.close()
@@ -168,9 +212,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Программа для анализа данных скорости ветра в файлах NetCDF.")
     parser.add_argument(
         "--startdate", "-sd",
-        # required=False,
-        # default="2015-05-01",
-        required=True,
+        required=False,
+        default="2015-05-01",
+        # required=True,
         help="Дата начала периода в формате yyyy-mm-dd",
     )
     parser.add_argument(
@@ -206,7 +250,8 @@ if __name__ == "__main__":
         default="./",
         help="Путь куда сохранять"
     )
-    # Парсим аргументы
+
+    # Передаем аргументы
     args = parser.parse_args()
     cis_type_zn = True
     cis_type_az = True
