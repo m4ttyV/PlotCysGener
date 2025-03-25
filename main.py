@@ -130,7 +130,10 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     if period == 0:
         end_date = start_date + relativedelta(months=1)
     else:
-        end_date = start_date + timedelta(days=10)
+        if start_date.day >= 21:
+            end_date = start_date + relativedelta(months=1) - timedelta(days=start_date.day)
+        else:
+            end_date = start_date + timedelta(days=10)
 
     # формируем и заранее создаем необходимые списки
     view_mon_rows = get_cis_property_view_month(start_date, end_date, cur)
