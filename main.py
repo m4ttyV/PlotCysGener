@@ -39,7 +39,7 @@ def track_az(bm, tracks): #4
 def dot_tc(bm, dots):
     for dot in dots:
         vm_lons, vm_lats = dot.split(' ')
-        color = 'yellow'
+        color = 'orange'
         x, y = bm(vm_lons, vm_lats)
         bm.plot(x, y, marker='o', color=color, markersize=5)
 
@@ -78,14 +78,24 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     # Считываем карту и рисуем необходимую область
     os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
     gpd.read_file('map/ne_110m_coastline.shp')
-    bm = Basemap(width=8000000,height=6500000,
-                rsphere=(6378137.00,6356752.3142),\
-                resolution='l',area_thresh=1000.,projection='lcc',\
-                lat_1=80.,lat_2=55,lat_0=45,lon_0=+150.)
-                # lat_1=20., lat_2=55, lat_0=45, lon_0=+150.)
+    plt.figure(figsize=(20, 16))
+    # bm = Basemap(width=8000000,height=6500000,
+    #             rsphere=(6378137.00,6356752.3142),\
+    #             resolution='h',area_thresh=1000.,projection='lcc',\
+    #             lat_1=-10.,lat_2=55,lat_0=45,lon_0=+150.)
+    #             # lat_1=20., lat_2=55, lat_0=45, lon_0=+150.)
+
+    bm = Basemap(projection='aeqd',
+                  lon_0=140,
+                  lat_0=45,
+                  width=9000000,
+                  height=9000000,
+                 resolution='h',area_thresh=1000.)
+
     bm.drawparallels(np.arange(-80.,81.,5.))
     bm.drawmeridians(np.arange(-180.,181.,5.))
-    bm.readshapefile('map/ne_110m_coastline', 'coastline')
+    bm.drawcoastlines()
+    #bm.readshapefile('map/ne_110m_coastline', 'coastline')
 
     # Считываем параметры БД
     with open('confing.conf', 'r') as f:
@@ -203,10 +213,10 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
         filepath = filepath + "Az"
     if cys_type_tc:
         filepath = filepath + "Tc"
-    filepath = filepath + ".jpg"
+    filepath = filepath + ".png"
 
     # сохраняем файл
-    plt.savefig(filepath)
+    plt.savefig(filepath, bbox_inches='tight', pad_inches=0.1)
     # Закрываем соединение
     cur.close()
     conn.close()
@@ -216,7 +226,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--startdate", "-sd",
         required=False,
-        default="2015-05-01",
+        default="2024-08-01",
         # required=True,
         help="Дата начала периода в формате yyyy-mm-dd",
     )
