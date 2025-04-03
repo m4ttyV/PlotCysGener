@@ -32,39 +32,74 @@ def track_az(bm, tracks): #4
         line = loads(track)
         lons, lats = zip(*list(line.coords))  # Разбираем координаты
         x, y = bm(lons, lats)
+        subtitle_dot = list(line.coords)[0]
+        #по полученной точке рисовать
+        # plt.text(x, y, , fontsize=12, color=color)
         color = 'red'
         bm.plot(x, y, marker=None, color=color, linewidth=1)
 
+def stage_type_id_color(type_id):
+        if type_id == 2:
+            return 'red'
+        elif type_id == 7:
+            return 'orange'
+        elif type_id == 6:
+            return 'green'
+        elif type_id == 11:
+            return 'purple'
+        elif type_id == 29:
+            return 'brown'
 
 def dot_tc(bm, dots):
+    count = 0
     for dot in dots:
-        vm_lons, vm_lats = dot.split(' ')
-        color = 'orange'
-        x, y = bm(vm_lons, vm_lats)
+        vm_lons, vm_lats, dot_id, dot_slp, dot_type_id = dot.split(' ') #x, y, подпись id, давление, тип точки
+        color = stage_type_id_color(dot_type_id)
+        x, y = bm(float(vm_lons), float(vm_lats))
+        # будет функция возвращающая тип маркера (и цвет и тп)
         bm.plot(x, y, marker='o', color=color, markersize=5)
+        if count == 0:
+            x += 20000
+            y += 20000
+            plt.text(x, y, str(dot_id), fontsize=12, color=color)
+            #Пишем имя троп циклона
+        count += 1
 
 def dot_zn(bm, dots):
+    count = 0
     for dot in dots:
-        vm_lons, vm_lats = dot.split(' ')
+        vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'blue'
-        x, y = bm(vm_lons, vm_lats)
+        x, y = bm(float(vm_lons), float(vm_lats))
         bm.plot(x, y, marker='o', color=color, markersize=5)
+        if count == 0:
+            x += 20000
+            y += 20000
+            plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        count += 1
 
 def dot_az(bm, dots):
+    count = 0
     for dot in dots:
-        vm_lons, vm_lats = dot.split(' ')
+        vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'red'
-        x, y = bm(vm_lons, vm_lats)
+        x, y = bm(float(vm_lons), float(vm_lats))
         bm.plot(x, y, marker='o', color=color, markersize=5)
+        if count == 0:
+            x += 20000
+            y += 20000
+            plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        count += 1
 
 def get_cis_property_view_month(date_start, date_end, cur):
-    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
+    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id, * FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
+    # command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
     cur.execute(command)
     view_mon_rows = cur.fetchall()
     return view_mon_rows
 
 def get_cis_track_view_month(date_start, date_end, cur):
-    command = f"SELECT ST_AsText(track), cic_type_id FROM ciclones.cic_track_view_gs_full WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
+    command = f"SELECT ST_AsText(track), cic_type_id, * FROM ciclones.cic_track_view_gs_full WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
     cur.execute(command)
     track_view_rows = cur.fetchall()
     return track_view_rows
@@ -84,13 +119,17 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     #             resolution='h',area_thresh=1000.,projection='lcc',\
     #             lat_1=-10.,lat_2=55,lat_0=45,lon_0=+150.)
     #             # lat_1=20., lat_2=55, lat_0=45, lon_0=+150.)
-
-    bm = Basemap(projection='aeqd',
+    blanc_type = "None"
+    if blanc_type == "TC":
+        bm = Basemap(projection='aeqd', # Тропики
                   lon_0=140,
                   lat_0=45,
                   width=9000000,
                   height=9000000,
-                 resolution='h',area_thresh=1000.)
+                 resolution='i',area_thresh=1000.)
+    else:
+        bm = Basemap(projection='merc', llcrnrlat=20, urcrnrlat=70, \
+                    llcrnrlon=100, urcrnrlon=200, lat_ts=20, resolution='i')
 
     bm.drawparallels(np.arange(-80.,81.,5.))
     bm.drawmeridians(np.arange(-180.,181.,5.))
@@ -180,26 +219,33 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     for dot in view_mon_rows:
         vm_lons = dot[0]
         vm_lats = dot[1]
+        dot_id = str(dot[3])[-2:]
+        dot_slp = dot[18]
+        dot_stage_type_id = None
+        if dot[13]:
+            dot_stage_type_id = dot[13]
         type = dot[2]
         if cys_type_tc:
             if type == 1:
-                mon_view_tc.append(f"{vm_lons} {vm_lats}")
+                mon_view_tc.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp} {dot_stage_type_id}")
         if cys_type_zn:
             if type == 3:
-                mon_view_zn.append(f"{vm_lons} {vm_lats}")
+                mon_view_zn.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
         if cys_type_az:
             if type == 4:
-                mon_view_az.append(f"{vm_lons} {vm_lats}")
+                mon_view_az.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
 
-    # построение точек
-    dot_tc(bm, mon_view_tc)
-    dot_zn(bm, mon_view_zn)
-    dot_az(bm, mon_view_az)
 
     # построение линий
     track_tc(bm, track_view_tc)
     track_zn(bm, track_view_zn)
     track_az(bm, track_view_az)
+
+
+    # построение точек
+    dot_tc(bm, mon_view_tc)
+    dot_zn(bm, mon_view_zn)
+    dot_az(bm, mon_view_az)
 
     # формирование имени файла и пути
     filepath = save_path + str(datetime.strftime(start_date,"%Y%m%d"))
