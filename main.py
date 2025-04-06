@@ -11,32 +11,20 @@ from datetime import datetime, timedelta
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 
-def track_tc(bm, tracks): #1
-    for track in tracks:
-        line = loads(track)
-        lons, lats = zip(*list(line.coords))  # Разбираем координаты
-        x, y = bm(lons, lats)
-        color = 'yellow'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
+# Класс строк линий, скорее всего не пригодится
+class TrackRow:
+    def __init__(self, coords, name, id):
+        self.coords = coords
+        self.name = name
+        self.id = id
 
-def track_zn(bm, tracks): #3
-    for track in tracks:
-        line = loads(track)
-        lons, lats = zip(*list(line.coords))  # Разбираем координаты
-        x, y = bm(lons, lats)
-        color = 'blue'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
-
-def track_az(bm, tracks): #4
-    for track in tracks:
-        line = loads(track)
-        lons, lats = zip(*list(line.coords))  # Разбираем координаты
-        x, y = bm(lons, lats)
-        subtitle_dot = list(line.coords)[0]
-        #по полученной точке рисовать
-        # plt.text(x, y, , fontsize=12, color=color)
-        color = 'red'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
+# Класс строк точек: X, Y, давление
+class DotRow:
+    def __init__(self, lon, lat, type_id, slp):
+        self.lon = lon
+        self.lat = lat
+        self.type_id = type_id
+        self.slp = slp
 
 def stage_type_id_color(type_id):
         if type_id == 2:
@@ -50,56 +38,104 @@ def stage_type_id_color(type_id):
         elif type_id == 29:
             return 'brown'
 
+def track_tc(bm, tracks): #1
+    for track in tracks:
+        line = loads(track.coords)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'black'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+
+def track_zn(bm, tracks): #3
+    for track in tracks:
+        line = loads(track.coords)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'darkblue'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+
+def track_az(bm, tracks): #4
+    for track in tracks:
+        line = loads(track.coords)
+        lons, lats = zip(*list(line.coords))  # Разбираем координаты
+        x, y = bm(lons, lats)
+        color = 'red'
+        bm.plot(x, y, marker=None, color=color, linewidth=1)
+        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+
 def dot_tc(bm, dots):
-    count = 0
+    prev_dot_id = -1
     for dot in dots:
-        vm_lons, vm_lats, dot_id, dot_slp, dot_type_id = dot.split(' ') #x, y, подпись id, давление, тип точки
-        color = stage_type_id_color(dot_type_id)
-        x, y = bm(float(vm_lons), float(vm_lats))
+        # vm_lons, vm_lats, dot_id, dot_slp, dot_type_id = dot.split(' ') # x, y, подпись id, давление, тип точки
+        color = stage_type_id_color(dot.type_id)
+        x, y = bm(float(dot.lon), float(dot.lat))
+        if dot.slp:
+            plt.text(x + 20000, y + 20000, str(dot.slp), fontsize=12, color=color)
         # будет функция возвращающая тип маркера (и цвет и тп)
-        bm.plot(x, y, marker='o', color=color, markersize=5)
-        if count == 0:
-            x += 20000
-            y += 20000
-            plt.text(x, y, str(dot_id), fontsize=12, color=color)
-            #Пишем имя троп циклона
-        count += 1
+        bm.plot(x, y, marker='o', color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
+
+        # if tmp in label_dots:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        #
+        # if prev_dot_id != dot_id:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        # prev_dot_id = dot_id
 
 def dot_zn(bm, dots):
-    count = 0
+    # prev_dot_id = -1
     for dot in dots:
-        vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
+        # vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'blue'
-        x, y = bm(float(vm_lons), float(vm_lats))
-        bm.plot(x, y, marker='o', color=color, markersize=5)
-        if count == 0:
-            x += 20000
-            y += 20000
-            plt.text(x, y, str(dot_id), fontsize=12, color=color)
-        count += 1
+        x, y = bm(float(dot.lon), float(dot.lat))
+        bm.plot(x, y, marker='o', color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
+        if dot.slp:
+            plt.text(x + 20000, y + 20000, str(dot.slp), fontsize=12, color=color)
+        # if f"({vm_lons}, {vm_lats})" in label_dots:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        #
+        # if prev_dot_id != dot_id:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        # prev_dot_id = dot_id
 
 def dot_az(bm, dots):
-    count = 0
+    prev_dot_id = -1
     for dot in dots:
-        vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
+        # vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'red'
-        x, y = bm(float(vm_lons), float(vm_lats))
-        bm.plot(x, y, marker='o', color=color, markersize=5)
-        if count == 0:
-            x += 20000
-            y += 20000
-            plt.text(x, y, str(dot_id), fontsize=12, color=color)
-        count += 1
+        x, y = bm(float(dot.lon), float(dot.lat))
+        bm.plot(x, y, marker='o', color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
+        if dot.slp:
+            plt.text(x + 20000, y + 20000, str(dot.slp), fontsize=12, color=color)
+
+        # if f"({vm_lons}, {vm_lats})" in label_dots:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        #
+        # if prev_dot_id != dot_id:
+        #     x += 20000
+        #     y += 20000
+        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
+        # prev_dot_id = dot_id
 
 def get_cis_property_view_month(date_start, date_end, cur):
-    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id, * FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
-    # command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
+    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id, * FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}' order by cic_id, max_datetime;"
     cur.execute(command)
     view_mon_rows = cur.fetchall()
     return view_mon_rows
 
 def get_cis_track_view_month(date_start, date_end, cur):
-    command = f"SELECT ST_AsText(track), cic_type_id, * FROM ciclones.cic_track_view_gs_full WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}'"
+    command = f"SELECT ST_AsText(track), cic_type_id, * FROM ciclones.cic_track_view_gs_full WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}' order by cic_id, max_datetime;"
     cur.execute(command)
     track_view_rows = cur.fetchall()
     return track_view_rows
@@ -109,16 +145,11 @@ def get_cis_track_view_month(date_start, date_end, cur):
 # 3 - циклон
 # 4 - антициклон
 
-def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): #Циклон, Антициклон, Тропический циклон
+def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, is_slp, is_track_name): #Циклон, Антициклон, Тропический циклон
     # Считываем карту и рисуем необходимую область
     os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
     gpd.read_file('map/ne_110m_coastline.shp')
     plt.figure(figsize=(20, 16))
-    # bm = Basemap(width=8000000,height=6500000,
-    #             rsphere=(6378137.00,6356752.3142),\
-    #             resolution='h',area_thresh=1000.,projection='lcc',\
-    #             lat_1=-10.,lat_2=55,lat_0=45,lon_0=+150.)
-    #             # lat_1=20., lat_2=55, lat_0=45, lon_0=+150.)
     blanc_type = "None"
     if blanc_type == "TC":
         bm = Basemap(projection='aeqd', # Тропики
@@ -134,7 +165,6 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     bm.drawparallels(np.arange(-80.,81.,5.))
     bm.drawmeridians(np.arange(-180.,181.,5.))
     bm.drawcoastlines()
-    #bm.readshapefile('map/ne_110m_coastline', 'coastline')
 
     # Считываем параметры БД
     with open('confing.conf', 'r') as f:
@@ -187,6 +217,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     # формируем и заранее создаем необходимые списки
     view_mon_rows = get_cis_property_view_month(start_date, end_date, cur)
     track_view_rows = get_cis_track_view_month(start_date, end_date, cur)
+
     track_view_tc = list()
     track_view_zn = list()
     track_view_az = list()
@@ -195,52 +226,75 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
     mon_view_zn = list()
     mon_view_az = list()
 
+    label_dot_dict = dict()
+
     # формируем списки линий по типам циклонов
     for track in track_view_rows:
-        type = track[1]
+        track_type = track[1]
+        track_id = ""
+        if is_track_name:
+            track_id = str(track[2])[-2:]
         row = track[0]
-        if type == 1:
+        # Проверяем нужны ли подписи имен линий и если нужны передаем и их
+        if is_track_name:
+            if track[3] != None:
+                name = track[3]
+            else:
+                name = ""
+            element = TrackRow(row, name, track_id)
+        else:
+            element = TrackRow(row, "", track_id)
+
+        if track_type == 1:
             if cys_type_tc:
                 if row is None:
                     continue
-                track_view_tc.append(row)
-        if type == 3:
+                track_view_tc.append(element)
+        if track_type == 3:
              if cys_type_zn:
                 if row is None:
                     continue
-                track_view_zn.append(row)
-        if type == 4:
+                track_view_zn.append(element)
+        if track_type == 4:
             if cys_type_az:
                 if row is None:
                     continue
-                track_view_az.append(row)
+                track_view_az.append(element)
 
     # формируем списки точек по типам циклонов
     for dot in view_mon_rows:
         vm_lons = dot[0]
         vm_lats = dot[1]
-        dot_id = str(dot[3])[-2:]
-        dot_slp = dot[18]
+        dt = int(datetime.strftime(dot[15],"%H"))
+        dot_type = dot[2]
+        # Проверяем нужно ли подписать давление и если нужно то передаем его значение по условию
+        dot_slp = ""
+        if dt == 0 and is_slp:
+            dot_slp = dot[18]
+
         dot_stage_type_id = None
         if dot[13]:
             dot_stage_type_id = dot[13]
-        type = dot[2]
-        if cys_type_tc:
-            if type == 1:
-                mon_view_tc.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp} {dot_stage_type_id}")
-        if cys_type_zn:
-            if type == 3:
-                mon_view_zn.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
-        if cys_type_az:
-            if type == 4:
-                mon_view_az.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
 
+        element = DotRow(vm_lons, vm_lats, dot_stage_type_id, dot_slp)
+
+        if cys_type_tc:
+            if dot_type == 1:
+                # mon_view_tc.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp} {dot_stage_type_id}")
+                mon_view_tc.append(element)
+        if cys_type_zn:
+            if dot_type == 3:
+                # mon_view_zn.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
+                mon_view_zn.append(element)
+        if cys_type_az:
+            if dot_type == 4:
+                # mon_view_az.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
+                mon_view_az.append(element)
 
     # построение линий
     track_tc(bm, track_view_tc)
     track_zn(bm, track_view_zn)
     track_az(bm, track_view_az)
-
 
     # построение точек
     dot_tc(bm, mon_view_tc)
@@ -259,7 +313,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path): 
         filepath = filepath + "Az"
     if cys_type_tc:
         filepath = filepath + "Tc"
-    filepath = filepath + ".png"
+    filepath += ".png"
 
     # сохраняем файл
     plt.savefig(filepath, bbox_inches='tight', pad_inches=0.1)
@@ -309,12 +363,28 @@ if __name__ == "__main__":
         default="./",
         help="Путь куда сохранять"
     )
-
+    parser.add_argument(
+        "--dots_slp", "-slp",
+        required=False,
+        type=float,
+        default=1,
+        help="Нужно ли давление точек"
+    )
+    parser.add_argument(
+        "--track_name", "-tn",
+        required=False,
+        type=float,
+        default=0,
+        help="Нужны ли имена линий"
+    )
     # Передаем аргументы
     args = parser.parse_args()
     cis_type_zn = True
     cis_type_az = True
     cis_type_tc = True
+    is_slp = True
+    is_track_name = True
+
     if args.cyclone == 0:
         cis_type_zn = False
 
@@ -324,4 +394,10 @@ if __name__ == "__main__":
     if args.tropicalcyclone == 0:
         cis_type_tc = False
 
-    main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave)
+    if args.dots_slp == 0:
+        is_slp = False
+
+    if args.track_name == 0:
+        is_track_name = False
+
+    main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name)
