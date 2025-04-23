@@ -1,7 +1,8 @@
+import csv
+
 import psycopg2
 from shapely.wkt import loads
 import numpy as np
-import geopandas as gpd
 import os
 import sys
 import argparse
@@ -26,6 +27,17 @@ class DotRow:
         self.type_id = type_id
         self.slp = slp
 
+class CSVRow:
+    def __init__(self, id, datetime, lon, lat, slp):
+        self.id = id
+        self.datetime = datetime
+        self.lon = lon
+        self.lat = lat
+        self.slp = slp
+
+def marker_type():
+    return 'o'
+
 def stage_type_id_color(type_id):
         if type_id == 2:
             return 'red'
@@ -38,32 +50,48 @@ def stage_type_id_color(type_id):
         elif type_id == 29:
             return 'brown'
 
-def track_tc(bm, tracks): #1
+def track_tc(bm, tracks, DotRow): #1
     for track in tracks:
         line = loads(track.coords)
+        coords = list(line.coords)
+
+        paired_coords = [(coords[i], coords[i + 1]) for i in range(len(coords) - 1)]
+        for pair in paired_coords:
+            first_coord, second_coord = pair
+            first_coord_lon, first_coord_lat = first_coord
+            for dot in DotRow:
+                if dot.lon == first_coord_lon and dot.lat == first_coord_lat:
+                    color = stage_type_id_color(dot.type_id)
+                    lons, lats = zip(*list(pair))  # Разбираем координаты
+                    x, y = bm(lons, lats)
+                    bm.plot(x, y, marker=None, color=color, linewidth=2)
+                    plt.text(x[0] + 20000, y[0] + 20000, str(track.name).replace(' (', '\n('), fontsize=20, weight = "bold", color=color)
+
+
         lons, lats = zip(*list(line.coords))  # Разбираем координаты
         x, y = bm(lons, lats)
-        color = 'black'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
-        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+        # color = 'black'
+        # bm.plot(x, y, marker=None, color=color, linewidth=1)
+        # plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color='black')
 
-def track_zn(bm, tracks): #3
+def track_zn(bm, tracks):
     for track in tracks:
         line = loads(track.coords)
         lons, lats = zip(*list(line.coords))  # Разбираем координаты
         x, y = bm(lons, lats)
         color = 'darkblue'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
-        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+        bm.plot(x, y, marker=None, color=color, linewidth=2)
 
-def track_az(bm, tracks): #4
+
+def track_az(bm, tracks):
     for track in tracks:
         line = loads(track.coords)
         lons, lats = zip(*list(line.coords))  # Разбираем координаты
         x, y = bm(lons, lats)
         color = 'red'
-        bm.plot(x, y, marker=None, color=color, linewidth=1)
-        plt.text(x[1] + 20000, y[1] + 20000, str(track.name).replace(' (', '\n('), fontsize=12, color=color)
+        bm.plot(x, y, marker=None, color=color, linewidth=2)
+        plt.text(x[0] + 20000, y[0] + 20000, str(track.id).replace(' (', '\n('), fontsize=20, weight = "bold", color=color)
+
 
 def dot_tc(bm, dots):
     prev_dot_id = -1
@@ -88,24 +116,13 @@ def dot_tc(bm, dots):
         # prev_dot_id = dot_id
 
 def dot_zn(bm, dots):
-    # prev_dot_id = -1
     for dot in dots:
-        # vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'blue'
         x, y = bm(float(dot.lon), float(dot.lat))
-        bm.plot(x, y, marker='o', color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
+        marker = marker_type()
+        bm.plot(x, y, marker=marker, color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
         if dot.slp:
             plt.text(x + 20000, y + 20000, str(dot.slp), fontsize=12, color=color)
-        # if f"({vm_lons}, {vm_lats})" in label_dots:
-        #     x += 20000
-        #     y += 20000
-        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
-        #
-        # if prev_dot_id != dot_id:
-        #     x += 20000
-        #     y += 20000
-        #     plt.text(x, y, str(dot_id), fontsize=12, color=color)
-        # prev_dot_id = dot_id
 
 def dot_az(bm, dots):
     prev_dot_id = -1
@@ -113,7 +130,8 @@ def dot_az(bm, dots):
         # vm_lons, vm_lats, dot_id, dot_slp = dot.split(' ')
         color = 'red'
         x, y = bm(float(dot.lon), float(dot.lat))
-        bm.plot(x, y, marker='o', color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
+        marker = marker_type()
+        bm.plot(x, y, marker=marker, color=color, markersize=5,  markeredgecolor=color, markerfacecolor='white')
         if dot.slp:
             plt.text(x + 20000, y + 20000, str(dot.slp), fontsize=12, color=color)
 
@@ -140,17 +158,37 @@ def get_cis_track_view_month(date_start, date_end, cur):
     track_view_rows = cur.fetchall()
     return track_view_rows
 
-# 1 - тропический циклон
+def csv_gen(filename, csv_row): #id, datetime, lon, lat, slp
+    with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
+        writer = csv.writer(csvfile, delimiter=';')
+        writer.writerow(["id", "datetime", "lon", "lat", "slp"])
+        for row in csv_row:
+            writer.writerow([
+                str(row.id),
+                str(row.datetime.strftime("%Y.%m.%d")),
+                str(int(row.lon)),
+                str(int(row.lat)),
+                str(int(row.slp))
+            ])
+
+
+# 1 - тропический циклон TC
 # 2 -
-# 3 - циклон
-# 4 - антициклон
+# 3 - циклон ZN
+# 4 - антициклон AZ
 
 def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, is_slp, is_track_name): #Циклон, Антициклон, Тропический циклон
-    # Считываем карту и рисуем необходимую область
+
+    try:
+        os.makedirs(save_path)
+    except:
+        pass
+        # Считываем карту и рисуем необходимую область
+
     os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
-    gpd.read_file('map/ne_110m_coastline.shp')
     plt.figure(figsize=(20, 16))
     blanc_type = "None"
+
     if blanc_type == "TC":
         bm = Basemap(projection='aeqd', # Тропики
                   lon_0=140,
@@ -226,6 +264,10 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
     mon_view_zn = list()
     mon_view_az = list()
 
+    csv_dot_tc = list()
+    csv_dot_zn = list()
+    csv_dot_az = list()
+
     label_dot_dict = dict()
 
     # формируем списки линий по типам циклонов
@@ -266,33 +308,36 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
         vm_lons = dot[0]
         vm_lats = dot[1]
         dt = int(datetime.strftime(dot[15],"%H"))
+        datetime_dot = dot[15]
         dot_type = dot[2]
+        track_id = str(dot[5])[-2:]
         # Проверяем нужно ли подписать давление и если нужно то передаем его значение по условию
         dot_slp = ""
         if dt == 0 and is_slp:
             dot_slp = dot[18]
 
-        dot_stage_type_id = None
+        dot_id = None
         if dot[13]:
-            dot_stage_type_id = dot[13]
+            dot_id = dot[13]
 
-        element = DotRow(vm_lons, vm_lats, dot_stage_type_id, dot_slp)
-
+        element = DotRow(vm_lons, vm_lats, dot_id, dot_slp)
+        dot_slp = dot[18]
+        csv_element = CSVRow(-1, datetime_dot, vm_lons, vm_lats, dot_slp)
         if cys_type_tc:
             if dot_type == 1:
-                # mon_view_tc.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp} {dot_stage_type_id}")
                 mon_view_tc.append(element)
+                csv_dot_tc.append(csv_element)
         if cys_type_zn:
             if dot_type == 3:
-                # mon_view_zn.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
                 mon_view_zn.append(element)
+                csv_dot_zn.append(csv_element)
         if cys_type_az:
             if dot_type == 4:
-                # mon_view_az.append(f"{vm_lons} {vm_lats} {dot_id} {dot_slp}")
                 mon_view_az.append(element)
+                csv_dot_az.append(csv_element)
 
     # построение линий
-    track_tc(bm, track_view_tc)
+    track_tc(bm, track_view_tc, mon_view_tc)
     track_zn(bm, track_view_zn)
     track_az(bm, track_view_az)
 
@@ -301,12 +346,15 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
     dot_zn(bm, mon_view_zn)
     dot_az(bm, mon_view_az)
 
+
+
     # формирование имени файла и пути
     filepath = save_path + str(datetime.strftime(start_date,"%Y%m%d"))
     if period == "0":
         filepath = filepath + "_month_"
     else:
         filepath = filepath + "_decade_"
+    csv_filepath = filepath
     if cys_type_zn:
         filepath = filepath + "Zn"
     if cys_type_az:
@@ -321,12 +369,17 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
     cur.close()
     conn.close()
 
+    # написание csv файлов
+    csv_gen(f"{csv_filepath}AZ.csv", csv_dot_az)
+    csv_gen(f"{csv_filepath}ZN.csv", csv_dot_zn)
+    csv_gen(f"{csv_filepath}TC.csv", csv_dot_tc)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Программа для анализа данных скорости ветра в файлах NetCDF.")
     parser.add_argument(
         "--startdate", "-sd",
         required=False,
-        default="2024-08-01",
+        default="2025-01-01",
         # required=True,
         help="Дата начала периода в формате yyyy-mm-dd",
     )
@@ -354,7 +407,7 @@ if __name__ == "__main__":
         "--tropicalcyclone", "-tc",
         required=False,
         type=float,
-        default=1,
+        default=0,
         help="Нужен ли тропический циклон (1 или 0)"
     )
     parser.add_argument(
@@ -367,14 +420,14 @@ if __name__ == "__main__":
         "--dots_slp", "-slp",
         required=False,
         type=float,
-        default=1,
+        default=0,
         help="Нужно ли давление точек"
     )
     parser.add_argument(
         "--track_name", "-tn",
         required=False,
         type=float,
-        default=0,
+        default=1,
         help="Нужны ли имена линий"
     )
     # Передаем аргументы
