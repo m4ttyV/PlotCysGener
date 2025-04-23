@@ -311,7 +311,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
         dt = int(datetime.strftime(dot[15],"%H"))
         datetime_dot = dot[15]
         dot_type = dot[2]
-        track_id = str(dot[5])[-2:]
+        track_id = str(dot[4])[-2:]
         # Проверяем нужно ли подписать давление и если нужно то передаем его значение по условию
         dot_slp = ""
         if dt == 0 and is_slp:
