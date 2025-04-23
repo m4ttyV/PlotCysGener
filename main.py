@@ -81,6 +81,7 @@ def track_zn(bm, tracks):
         x, y = bm(lons, lats)
         color = 'darkblue'
         bm.plot(x, y, marker=None, color=color, linewidth=2)
+        plt.text(x[0] + 20000, y[0] + 20000, str(track.id).replace(' (', '\n('), fontsize=20, weight = "bold", color=color)
 
 
 def track_az(bm, tracks):
@@ -322,7 +323,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
 
         element = DotRow(vm_lons, vm_lats, dot_id, dot_slp)
         dot_slp = dot[18]
-        csv_element = CSVRow(-1, datetime_dot, vm_lons, vm_lats, dot_slp)
+        csv_element = CSVRow(track_id, datetime_dot, vm_lons, vm_lats, dot_slp)
         if cys_type_tc:
             if dot_type == 1:
                 mon_view_tc.append(element)
