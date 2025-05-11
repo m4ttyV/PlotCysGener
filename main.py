@@ -147,7 +147,7 @@ def dot_az(bm, dots):
         # prev_dot_id = dot_id
 
 def get_cis_property_view_month(date_start, date_end, cur):
-    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id, * FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}' order by cic_id, max_datetime;"
+    command = f"SELECT ST_X(coord), ST_Y(coord), cic_type_id, * FROM ciclones.cic_property_view_mon WHERE max_datetime >= '{date_start}' AND max_datetime <= '{date_end}' order by cic_id, datetime;"
     cur.execute(command)
     view_mon_rows = cur.fetchall()
     return view_mon_rows
@@ -198,8 +198,8 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
                   height=9000000,
                  resolution='i',area_thresh=1000.)
     else:
-        bm = Basemap(projection='merc', llcrnrlat=20, urcrnrlat=70, \
-                    llcrnrlon=100, urcrnrlon=200, lat_ts=20, resolution='i')
+        bm = Basemap(projection='merc', llcrnrlat=20, urcrnrlat=65, \
+                    llcrnrlon=105, urcrnrlon=190, lat_ts=20, resolution='i')
 
     bm.drawparallels(np.arange(-80.,81.,5.))
     bm.drawmeridians(np.arange(-180.,181.,5.))
@@ -351,7 +351,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
 
     # формирование имени файла и пути
     filepath = save_path + str(datetime.strftime(start_date,"%Y%m%d"))
-    if period == "0":
+    if period == 0:
         filepath = filepath + "_month_"
     else:
         filepath = filepath + "_decade_"
@@ -388,26 +388,27 @@ if __name__ == "__main__":
         "--period", "-p",
         required=False,
         default=0,
-        help="Тип периода (0 - месяц, 1 - декада"
+        help="Тип периода (0 - месяц, 1 - декада",
+        type=int
     )
     parser.add_argument(
         "--cyclone", "-zn",
         required=False,
-        type=float,
+        type=int,
         default=1,
-        help="Нужен ли циклон (1 или 0)"
+        help="Нужен ли циклон (1 или 0)",
     )
     parser.add_argument(
         "--anticyclone", "-az",
         required=False,
-        type=float,
+        type = int,
         default=1,
         help="Нужен ли антициклон (1 или 0)"
     )
     parser.add_argument(
         "--tropicalcyclone", "-tc",
         required=False,
-        type=float,
+        type=int,
         default=0,
         help="Нужен ли тропический циклон (1 или 0)"
     )
@@ -427,7 +428,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--track_name", "-tn",
         required=False,
-        type=float,
+        type=int,
         default=1,
         help="Нужны ли имена линий"
     )
@@ -454,4 +455,21 @@ if __name__ == "__main__":
     if args.track_name == 0:
         is_track_name = False
 
-    main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name)
+    for month in [1,2,3]:
+        for dec in [0,1,2]:
+            dt = datetime(2025, month=month, day=dec * 10 + 1)
+            print(dt)
+            main(True, True, False, dt.strftime('%Y-%m-%d'), 1, f'./ZN_AZ_m{month}_d{dec + 1}', False, True)
+            main(False, True, False, dt.strftime('%Y-%m-%d'), 1, f'./AZ_m{month}_d{dec + 1}', False, True)
+            main(True, False, False, dt.strftime('%Y-%m-%d'), 1, f'./ZN_m{month}_d{dec + 1}', False, True)
+
+        dt = datetime(2025, month=month, day=1)
+        print(dt)
+        main(True, True, False, dt.strftime('%Y-%m-%d'), 0, f'./ZN_AZ_m{month}', False, True)
+        main(False, True, False, dt.strftime('%Y-%m-%d'), 0, f'./AZ_m{month}', False, True)
+        main(True, False, False, dt.strftime('%Y-%m-%d'), 0, f'./ZN_m{month}', False, True)
+
+
+    #main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name)
+
+
