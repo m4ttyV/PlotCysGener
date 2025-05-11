@@ -83,7 +83,6 @@ def track_zn(bm, tracks):
         bm.plot(x, y, marker=None, color=color, linewidth=2)
         plt.text(x[0] + 20000, y[0] + 20000, str(track.id).replace(' (', '\n('), fontsize=20, weight = "bold", color=color)
 
-
 def track_az(bm, tracks):
     for track in tracks:
         line = loads(track.coords)
@@ -167,8 +166,8 @@ def csv_gen(filename, csv_row): #id, datetime, lon, lat, slp
             writer.writerow([
                 str(row.id),
                 str(row.datetime.strftime("%Y.%m.%d")),
-                str(int(row.lon)),
                 str(int(row.lat)),
+                str(int(row.lon)),
                 str(int(row.slp))
             ])
 
