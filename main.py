@@ -172,6 +172,7 @@ def csv_gen(filename, csv_row): #id, datetime, lon, lat, slp
             ])
 
 
+
 # 1 - тропический циклон TC
 # 2 -
 # 3 - циклон ZN
