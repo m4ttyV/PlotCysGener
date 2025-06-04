@@ -161,13 +161,13 @@ def get_cis_track_view_month(date_start, date_end, cur):
 def csv_gen(filename, csv_row): #id, datetime, lon, lat, slp
     with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
-        writer.writerow(["id", "datetime", "lon", "lat", "slp"])
+        writer.writerow(["id", "datetime", "lat", "lon", "slp"])
         for row in csv_row:
             writer.writerow([
                 str(row.id),
                 str(row.datetime.strftime("%Y.%m.%d")),
-                str(int(row.lat)),
-                str(int(row.lon)),
+                str(int(row.lat)), #широта
+                str(int(row.lon)), #долгота
                 str(int(row.slp))
             ])
 
@@ -366,6 +366,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
 
     # сохраняем файл
     plt.savefig(filepath, bbox_inches='tight', pad_inches=0.1)
+    plt.close()
     # Закрываем соединение
     cur.close()
     conn.close()
@@ -374,6 +375,7 @@ def main(cys_type_zn, cys_type_az, cys_type_tc, start_date, period, save_path, i
     csv_gen(f"{csv_filepath}AZ.csv", csv_dot_az)
     csv_gen(f"{csv_filepath}ZN.csv", csv_dot_zn)
     csv_gen(f"{csv_filepath}TC.csv", csv_dot_tc)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Программа для анализа данных скорости ветра в файлах NetCDF.")
@@ -446,7 +448,7 @@ if __name__ == "__main__":
     if args.anticyclone == 0:
         cis_type_az = False
 
-    if args.tropicalcyclone == 0:
+    if args.tropicalcyclone == 0: 
         cis_type_tc = False
 
     if args.dots_slp == 0:
@@ -455,19 +457,19 @@ if __name__ == "__main__":
     if args.track_name == 0:
         is_track_name = False
 
-    for month in [1,2,3]:
+    for month in [4,5]:
         for dec in [0,1,2]:
             dt = datetime(2025, month=month, day=dec * 10 + 1)
             print(dt)
-            main(True, True, False, dt.strftime('%Y-%m-%d'), 1, f'./ZN_AZ_m{month}_d{dec + 1}', False, True)
-            main(False, True, False, dt.strftime('%Y-%m-%d'), 1, f'./AZ_m{month}_d{dec + 1}', False, True)
-            main(True, False, False, dt.strftime('%Y-%m-%d'), 1, f'./ZN_m{month}_d{dec + 1}', False, True)
+            main(True, True, False, dt.strftime('%Y-%m-%d'), 1, f'./results/ZN_AZ_m{month}_d{dec + 1}', False, True)
+            main(False, True, False, dt.strftime('%Y-%m-%d'), 1, f'./results/AZ_m{month}_d{dec + 1}', False, True)
+            main(True, False, False, dt.strftime('%Y-%m-%d'), 1, f'./results/ZN_m{month}_d{dec + 1}', False, True)
 
         dt = datetime(2025, month=month, day=1)
         print(dt)
-        main(True, True, False, dt.strftime('%Y-%m-%d'), 0, f'./ZN_AZ_m{month}', False, True)
-        main(False, True, False, dt.strftime('%Y-%m-%d'), 0, f'./AZ_m{month}', False, True)
-        main(True, False, False, dt.strftime('%Y-%m-%d'), 0, f'./ZN_m{month}', False, True)
+        main(True, True, False, dt.strftime('%Y-%m-%d'), 0, f'./results/ZN_AZ_m{month}', False, True)
+        main(False, True, False, dt.strftime('%Y-%m-%d'), 0, f'./results/AZ_m{month}', False, True)
+        main(True, False, False, dt.strftime('%Y-%m-%d'), 0, f'./results/ZN_m{month}', False, True)
 
 
     #main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name)
