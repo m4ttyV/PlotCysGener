@@ -57,6 +57,13 @@ if __name__ == "__main__":
         default=1,
         help="Нужны ли имена линий"
     )
+    parser.add_argument(
+        "--blanc_type", "-bt",
+        required=False,
+        type=str,
+        default="None",
+        help="Тип бланка"
+    )
     # Передаем аргументы
     args = parser.parse_args()
     cis_type_zn = True
@@ -79,7 +86,9 @@ if __name__ == "__main__":
 
     if args.track_name == 0:
         is_track_name = False
-    #
+
+    blanc_type = args.blanc_type
+    # Циклоны и антициклоны
     # for month in [5]:
     #     for dec in [0,1,2]:
     #         dt = datetime(2025, month=month, day=dec * 10 + 1)
@@ -93,9 +102,10 @@ if __name__ == "__main__":
     #     main(True, True, False, dt.strftime('%Y-%m-%d'), 0, f'D:/tmp/test2407/results/{month}/ZN_AZ_m{month}_', False, True)
     #     main(False, True, False, dt.strftime('%Y-%m-%d'), 0, f'D:/tmp/test2407/results/{month}/AZ_m{month}_', False, True)
     #     main(True, False, False, dt.strftime('%Y-%m-%d'), 0, f'D:/tmp/test2407/results/{month}/ZN_m{month}_', False, True)
-    for month in [7]:
-        dt = datetime(2025, month=month, day=1)
-        main(False, False, True, dt.strftime('%Y-%m-%d'), 0, f'D:/tmp/test2407/results/{month}/TC_m{month}_', False, True, "TC")
-    # main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name)
+    # Тропики
+    # for month in [7]:
+    #     dt = datetime(2025, month=month, day=1)
+    #     main(False, False, True, dt.strftime('%Y-%m-%d'), 0, f'D:/tmp/test2407/results/{month}/TC_m{month}_', False, True, "TC")
+    main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name, blanc_type)
 
 
