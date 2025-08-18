@@ -109,4 +109,3 @@ if __name__ == "__main__":
 
     main(cis_type_zn, cis_type_az, cis_type_tc, args.startdate, args.period, args.pathtosave, is_slp, is_track_name, blanc_type)
 
-
